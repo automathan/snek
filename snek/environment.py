@@ -22,8 +22,11 @@ class Snek(gym.Env):
         self.clock = pg.time.Clock()
 
     def step(self, action):
-        collision_map = np.zeros((self.width, self.height))
-        
+        state = {}
+        reward = 0
+        done = False
+        info = {}
+
         # Pygame event handling (resolves some crashing)
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -46,11 +49,11 @@ class Snek(gym.Env):
             self.food.pos_x = random.randint(0, self.width - 1)
             self.food.pos_y = random.randint(0, self.height - 1)
 
-        state = {}
-        reward = 0
-        done = False
-        info = {}
-
+        # Death
+        if (self.player.pos_x, self.player.pos_y) in list(self.player.tail)[1:]:
+            reward = -1
+            done = True
+        
         return state, reward, done, info
 
     def render(self, mode='human'):
@@ -65,7 +68,9 @@ class Snek(gym.Env):
         self.clock.tick(int(self.framerate))
 
     def reset(self):
-        pass
+        self.player = Player(self, (self.width // 2, self.height // 2))
+        self.food = Food((random.randint(0, self.width - 1), random.randint(0, self.height - 1)))
+        return {}
 
 class Player:
     DIR_LEFT, DIR_RIGHT, DIR_UP, DIR_DOWN = range(4)
