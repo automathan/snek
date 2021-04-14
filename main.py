@@ -10,15 +10,15 @@ def main():
     env = Snek()
 
     if '--test' not in sys.argv:
-        states = env.reset()
+        env.reset()
 
         while True:
-            states, _, done, _ = env.step(random.randint(0, 4))
+            _, _, done, _ = env.step(random.randint(0, 4))
 
             env.render() # Comment out this call to train faster
 
             if done:
-                states = env.reset()
+                env.reset()
 
 if __name__ == '__main__':
     main()
