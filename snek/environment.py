@@ -5,6 +5,7 @@ import gym
 from gym import spaces
 import numpy as np
 import pygame as pg
+import itertools
 
 class Snek(gym.Env):
     NOP, LEFT, RIGHT, UP, DOWN = range(5)
@@ -14,7 +15,10 @@ class Snek(gym.Env):
         self.height = 9
         self.scale = 16
         self.player = Player(self, (self.width // 2, self.height // 2))
-        self.food = Food((random.randint(0, self.width - 1), random.randint(0, self.height - 1)))
+       
+        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))   
+        self.food = Food(random.choice(free_pos))
+
         self.framerate = 20
         pg.init()
         pg.display.set_caption('Snek')
@@ -46,8 +50,12 @@ class Snek(gym.Env):
         self.player.tick()
         if self.player.pos_x == self.food.pos_x and self.player.pos_y == self.food.pos_y:
             self.player.len += 1
-            self.food.pos_x = random.randint(0, self.width - 1)
-            self.food.pos_y = random.randint(0, self.height - 1)
+            
+            free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))   
+        
+            self.food.pos_x, self.food.pos_y = random.choice(free_pos)
+
+            reward = 1
 
         # Death
         if (self.player.pos_x, self.player.pos_y) in list(self.player.tail)[1:]:
@@ -61,7 +69,7 @@ class Snek(gym.Env):
         pg.draw.rect(self.screen, (24, 24, 24), (0, 0, self.width * self.scale, self.height * self.scale))
         
         for i, pos in enumerate(self.player.tail):
-            pg.draw.rect(self.screen, (160 if i % 2 == 0 else 140, 24, 24), (self.scale * pos[0], self.scale * pos[1], self.scale, self.scale))
+            pg.draw.rect(self.screen, (160 - i * (80 / len(self.player.tail)), 24, 24), (self.scale * pos[0], self.scale * pos[1], self.scale, self.scale))
         
         pg.draw.rect(self.screen, (24, 140, 24), (self.scale * self.food.pos_x, self.scale * self.food.pos_y, self.scale, self.scale))
         pg.display.flip()
@@ -69,7 +77,8 @@ class Snek(gym.Env):
 
     def reset(self):
         self.player = Player(self, (self.width // 2, self.height // 2))
-        self.food = Food((random.randint(0, self.width - 1), random.randint(0, self.height - 1)))
+        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))   
+        self.food = Food(random.choice(free_pos))
         return {}
 
 class Player:

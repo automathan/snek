@@ -1,5 +1,6 @@
 import sys
 import random
+from agent import Agent
 from snek.environment import Snek
 
 if '--novid' in sys.argv:
@@ -8,17 +9,18 @@ if '--novid' in sys.argv:
 
 def main():
     env = Snek()
+    agent = Agent(env)
 
     if '--test' not in sys.argv:
-        states = env.reset()
+        state = env.reset()
 
         while True:
-            states, _, done, _ = env.step(random.randint(0, 4))
+            state, _, done, _ = env.step(agent.act(state))
 
             env.render() # Comment out this call to train faster
 
             if done:
-                states = env.reset()
+                state = env.reset()
 
 if __name__ == '__main__':
     main()
