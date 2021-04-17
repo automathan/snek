@@ -2,8 +2,6 @@ import random
 import sys
 from collections import deque
 import gym
-from gym import spaces
-import numpy as np
 import pygame as pg
 import itertools
 
@@ -37,7 +35,7 @@ class Snek(gym.Env):
                 pg.quit()
                 sys.exit()
         pg.event.pump()
-        
+
         if action == Snek.LEFT and self.player.dir != Player.DIR_RIGHT:
             self.player.dir = Player.DIR_LEFT
         if action == Snek.RIGHT and self.player.dir != Player.DIR_LEFT:
@@ -46,7 +44,7 @@ class Snek(gym.Env):
             self.player.dir = Player.DIR_UP
         if action == Snek.DOWN and self.player.dir != Player.DIR_UP:
             self.player.dir = Player.DIR_DOWN
-            
+
         self.player.tick()
         if self.player.pos_x == self.food.pos_x and self.player.pos_y == self.food.pos_y:
             self.player.len += 1
@@ -61,13 +59,14 @@ class Snek(gym.Env):
         if (self.player.pos_x, self.player.pos_y) in list(self.player.tail)[1:]:
             reward = -1
             done = True
-        
+
         return state, reward, done, info
 
     def render(self, mode='human'):
         # Background
-        pg.draw.rect(self.screen, (24, 24, 24), (0, 0, self.width * self.scale, self.height * self.scale))
-        
+        pg.draw.rect(self.screen, (24, 24, 24),
+                     (0, 0, self.width * self.scale, self.height * self.scale))
+
         for i, pos in enumerate(self.player.tail):
             pg.draw.rect(self.screen, (160 - i * (80 / len(self.player.tail)), 24, 24), (self.scale * pos[0], self.scale * pos[1], self.scale, self.scale))
         
