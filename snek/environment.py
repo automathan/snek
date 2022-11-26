@@ -9,6 +9,8 @@ import itertools
 
 class Snek(gym.Env):
     NOP, LEFT, RIGHT, UP, DOWN = range(5)
+    COLOR_BKG = (24, 24, 24)
+    COLOR_FOOD = (140, 24, 24)
 
     def __init__(self):
         self.width = 9
@@ -16,14 +18,14 @@ class Snek(gym.Env):
         self.scale = 16
         self.player = Player(self, (self.width // 2, self.height // 2))
         self.steps = 0
-        self.max_steps = 1000
+        self.timeout = 500
 
         free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))
         self.wrap = False
         self.food = Food(random.choice(free_pos))
         self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(low=0, high=1, shape=(3,self.width,self.height), dtype=np.uint8)
-        self.framerate = 20
+        self.framerate = 10
         pg.init()
         pg.display.set_caption('Snek')
         self.screen = pg.display.set_mode((self.width * self.scale, self.height * self.scale))
@@ -76,7 +78,7 @@ class Snek(gym.Env):
             done = True
         
         self.steps += 1
-        if self.steps >= self.max_steps:
+        if self.steps >= self.timeout:
             self.steps = 0
             done = True
         
@@ -84,16 +86,37 @@ class Snek(gym.Env):
 
     def render(self, mode='human'):
         # Background
-        pg.draw.rect(self.screen, (24, 24, 24),
+        pg.draw.rect(self.screen, Snek.COLOR_BKG,
                      (0, 0, self.width * self.scale, self.height * self.scale))
 
         for i, pos in enumerate(self.player.tail):
-            pg.draw.rect(self.screen, (160 - i * (80 / len(self.player.tail)), 24, 24), (self.scale * pos[0], self.scale * pos[1], self.scale, self.scale))
-        
-        pg.draw.rect(self.screen, (24, 140, 24), (self.scale * self.food.pos_x, self.scale * self.food.pos_y, self.scale, self.scale))
+            pg.draw.rect(self.screen, (24, 160 - i * (80 / len(self.player.tail)), 24), (self.scale * pos[0], self.scale * pos[1], self.scale, self.scale))
+            
+            if i == 0:
+                self.draw_face(pos)
+                
+        pg.draw.rect(self.screen, Snek.COLOR_FOOD, (self.scale * self.food.pos_x, self.scale * self.food.pos_y, self.scale, self.scale))
         pg.display.flip()
         self.clock.tick(int(self.framerate))
-    
+
+    def draw_face(self, pos):
+        unit = self.scale / 6
+        if self.player.dir == Player.DIR_LEFT:
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit, self.scale * pos[1] + unit, unit, unit))
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit, self.scale * pos[1] + unit * 4, unit, unit))
+            
+        if self.player.dir == Player.DIR_RIGHT:
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit * 4, self.scale * pos[1] + unit, unit, unit))
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit * 4, self.scale * pos[1] + unit * 4, unit, unit))
+            
+        if self.player.dir == Player.DIR_UP:
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit, self.scale * pos[1] + unit, unit, unit))
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit * 4, self.scale * pos[1] + unit, unit, unit))
+            
+        if self.player.dir == Player.DIR_DOWN:
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit, self.scale * pos[1] + unit * 4, unit, unit))
+            pg.draw.rect(self.screen, (0, 0, 0), (self.scale * pos[0] + unit * 4, self.scale * pos[1] + unit * 4, unit, unit))
+
     def init_state(self):
         state = np.array([
             np.zeros((self.width, self.height)), # Head
