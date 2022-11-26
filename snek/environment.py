@@ -1,6 +1,8 @@
 import random
 import sys
 from collections import deque
+from gym import spaces
+import numpy as np
 import gym
 import pygame as pg
 import itertools
@@ -13,10 +15,14 @@ class Snek(gym.Env):
         self.height = 9
         self.scale = 16
         self.player = Player(self, (self.width // 2, self.height // 2))
-       
-        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))   
-        self.food = Food(random.choice(free_pos))
+        self.steps = 0
+        self.max_steps = 1000
 
+        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))
+        self.wrap = False
+        self.food = Food(random.choice(free_pos))
+        self.action_space = spaces.Discrete(5)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(3,self.width,self.height), dtype=np.uint8)
         self.framerate = 20
         pg.init()
         pg.display.set_caption('Snek')
@@ -24,7 +30,7 @@ class Snek(gym.Env):
         self.clock = pg.time.Clock()
 
     def step(self, action):
-        state = {}
+        state = self.init_state()
         reward = 0
         done = False
         info = {}
@@ -45,7 +51,7 @@ class Snek(gym.Env):
         if action == Snek.DOWN and self.player.dir != Player.DIR_UP:
             self.player.dir = Player.DIR_DOWN
 
-        self.player.tick()
+        survive = self.player.tick()
         if self.player.pos_x == self.food.pos_x and self.player.pos_y == self.food.pos_y:
             self.player.len += 1
             
@@ -55,11 +61,25 @@ class Snek(gym.Env):
 
             reward = 1
 
+        state[0][self.player.pos_x][self.player.pos_y] = 1
+        for pos in self.player.tail:
+            state[1][pos[0]][pos[1]] = 1
+        state[2][self.food.pos_x][self.food.pos_y] = 1
+        
         # Death
         if (self.player.pos_x, self.player.pos_y) in list(self.player.tail)[1:]:
             reward = -1
             done = True
-
+        
+        if not survive:
+            reward = -1
+            done = True
+        
+        self.steps += 1
+        if self.steps >= self.max_steps:
+            self.steps = 0
+            done = True
+        
         return state, reward, done, info
 
     def render(self, mode='human'):
@@ -73,12 +93,21 @@ class Snek(gym.Env):
         pg.draw.rect(self.screen, (24, 140, 24), (self.scale * self.food.pos_x, self.scale * self.food.pos_y, self.scale, self.scale))
         pg.display.flip()
         self.clock.tick(int(self.framerate))
+    
+    def init_state(self):
+        state = np.array([
+            np.zeros((self.width, self.height)), # Head
+            np.zeros((self.width, self.height)), # Body
+            np.zeros((self.width, self.height))  # Food
+        ])
+        return state
 
     def reset(self):
+        self.steps = 0
         self.player = Player(self, (self.width // 2, self.height // 2))
-        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))   
+        free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))
         self.food = Food(random.choice(free_pos))
-        return {}
+        return self.init_state()
 
 class Player:
     DIR_LEFT, DIR_RIGHT, DIR_UP, DIR_DOWN = range(4)
@@ -91,18 +120,29 @@ class Player:
         self.env = env
 
     def tick(self):
+        survive = True
         if self.dir == Player.DIR_LEFT:
+            if not self.env.wrap and self.pos_x - 1 < 0:
+                survive = False 
             self.pos_x = (self.pos_x - 1) % self.env.width
         if self.dir == Player.DIR_RIGHT:
+            if not self.env.wrap and self.pos_x + 1 >= self.env.width:
+                survive = False 
             self.pos_x = (self.pos_x + 1) % self.env.width
         if self.dir == Player.DIR_UP:
+            if not self.env.wrap and self.pos_y - 1 < 0:
+                survive = False 
             self.pos_y = (self.pos_y - 1) % self.env.height
         if self.dir == Player.DIR_DOWN:
+            if not self.env.wrap and self.pos_y + 1 >= self.env.height:
+                survive = False 
             self.pos_y = (self.pos_y + 1) % self.env.height
 
         if len(self.tail) >= self.len:
             self.tail.pop()
         self.tail.appendleft((self.pos_x, self.pos_y))
+
+        return survive
 
 class Food:
     def __init__(self, pos):
