@@ -11,19 +11,19 @@ if '--novid' in sys.argv:
 
 def main():
     env = Snek()
-    env = make_vec_env(Snek, n_envs=1)
+    env = make_vec_env(Snek, n_envs=2)
     #agent = Agent(env)
     
     new_logger = configure('./results', ["stdout", "csv", "json", "log"])
     model = PPO("MlpPolicy", env, verbose=1)
     model.set_logger(new_logger)
-    model.learn(total_timesteps=100000, log_interval=4)
+    model.learn(total_timesteps=20000000, log_interval=4)
     model.save("ppo_snek")
 
     total_len = 0
     num_episodes = 0
     
-    env = Snek()
+    env = Snek(render_enabled=True)
     obs = env.reset()
 
     while True:

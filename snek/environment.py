@@ -12,13 +12,14 @@ class Snek(gym.Env):
     COLOR_BKG = (24, 24, 24)
     COLOR_FOOD = (140, 24, 24)
 
-    def __init__(self):
+    def __init__(self, render_enabled=False):
         self.width = 9
         self.height = 9
         self.scale = 16
         self.player = Player(self, (self.width // 2, self.height // 2))
         self.steps = 0
         self.timeout = 500
+        self.render_enabled = render_enabled
 
         free_pos = list(filter(lambda pos: pos not in self.player.tail, itertools.product(range(self.width), repeat=2)))
         self.wrap = False
@@ -26,10 +27,12 @@ class Snek(gym.Env):
         self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(low=0, high=1, shape=(3,self.width,self.height), dtype=np.uint8)
         self.framerate = 10
-        pg.init()
-        pg.display.set_caption('Snek')
-        self.screen = pg.display.set_mode((self.width * self.scale, self.height * self.scale))
-        self.clock = pg.time.Clock()
+        
+        if self.render_enabled:
+            pg.init()
+            pg.display.set_caption('Snek')
+            self.screen = pg.display.set_mode((self.width * self.scale, self.height * self.scale))
+            self.clock = pg.time.Clock()
 
     def step(self, action):
         state = self.init_state()
@@ -38,11 +41,12 @@ class Snek(gym.Env):
         info = {}
 
         # Pygame event handling (resolves some crashing)
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-                sys.exit()
-        pg.event.pump()
+        if self.render_enabled:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    pg.quit()
+                    sys.exit()
+            pg.event.pump()
 
         if action == Snek.LEFT and self.player.dir != Player.DIR_RIGHT:
             self.player.dir = Player.DIR_LEFT
